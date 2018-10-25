@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">WreckFace</string>
+    <string name="welcome">Dobrodošli u WreckFace</string>
+    <string name="signature">Alen Salihbašić</string>
+    <string name="edit_text_hint">Upišite ime osobe za treniranje</string>
+    <string name="gender_button">Prepoznavanje spola</string>
+    <string name="age_button">Prepoznavanje dobi</string>
+    <string name="face_button">Prepoznavanje lica</string>
+    <string name="take_pic_button">Slikaj</string>
+    <string name="train_button">Treniraj</string>
+    <string name="reset_button">Poništi</string>
+    <string name="recognize_button">Prepoznaj</string>
+    <string name="train_question_tv">Koga želite trenirati?</string>
+    <string name="train_next_button">Dalje</string>
+    <string name="unknown_name">NEPOZNATO</string>
+</resources>
