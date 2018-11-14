@@ -4,7 +4,7 @@
     <string name="signature">Alen Salihbašić</string>
     <string name="edit_text_hint">Upišite ime osobe za treniranje</string>
     <string name="gender_button">Prepoznavanje spola</string>
-    <string name="age_button">Prepoznavanje dobi</string>
+    <string name="age_button">Prepoznavanje dobne skupine</string>
     <string name="face_button">Prepoznavanje lica</string>
     <string name="take_pic_button">Slikaj</string>
     <string name="train_button">Treniraj</string>
@@ -12,5 +12,8 @@
     <string name="recognize_button">Prepoznaj</string>
     <string name="train_question_tv">Koga želite trenirati?</string>
     <string name="train_next_button">Dalje</string>
-    <string name="unknown_name">NEPOZNATO</string>
+    <string name="flip_camera">OKRENI</string>
+    <string name="back_button">Natrag</string>
+    <string name="front_camera">Prednja</string>
+    <string name="back_camera">Zadnja</string>
 </resources>

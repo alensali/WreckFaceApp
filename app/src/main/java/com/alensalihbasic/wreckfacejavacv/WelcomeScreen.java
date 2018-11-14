@@ -33,7 +33,7 @@ public class WelcomeScreen extends AppCompatActivity {
         findViewById(R.id.face_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent faceIntent = new Intent(WelcomeScreen.this, TrainingInfo.class);
+                Intent faceIntent = new Intent(WelcomeScreen.this, TrainActivity.class);
                 startActivity(faceIntent);
             }
         });

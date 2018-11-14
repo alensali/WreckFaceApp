@@ -2,7 +2,6 @@ package com.alensalihbasic.wreckfacejavacv;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -10,7 +9,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -36,11 +38,11 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
     private CascadeClassifier mFaceDetector;
     private File mCascadeFile;
     private Mat mRgba, mGray;
-    private float mRelativeFaceSize = 0.2f;
     private int mAbsoluteFaceSize = 0;
-    private boolean takePhoto, trained;
-    private String personName;
+    private boolean takePhoto;
+    private int mCameraId = 1;
 
+    //Veza između aplikacije i OpenCV Manager-a
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -52,10 +54,10 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                // load cascade file from application resources
-                                InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
+                                InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                                mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+                                mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
                                 FileOutputStream os = new FileOutputStream(mCascadeFile);
 
                                 byte[] buffer = new byte[4096];
@@ -128,11 +130,36 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
 
         mOpenCvCameraView = findViewById(R.id.CameraView);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
+        mOpenCvCameraView.setCameraIndex(mCameraId);
         mOpenCvCameraView.setCvCameraViewListener(this);
 
-        SharedPreferences myPrefs = getApplicationContext().getSharedPreferences("myPrefs", MODE_PRIVATE);
-        personName = myPrefs.getString("name", null);
-        Log.v(TAG, "mName is " + personName);
+        ToggleButton mFlipCamera = findViewById(R.id.toggle_camera);
+        mFlipCamera.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    mCameraId = 0;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(mCameraId);
+                    mOpenCvCameraView.enableView();
+                } else {
+                    mCameraId = 1;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(1);
+                    mOpenCvCameraView.enableView();
+                }
+            }
+        });
+
+        Button mBackButton = findViewById(R.id.back_button);
+        mBackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Methods.reset();
+                Intent backIntent = new Intent(TrainActivity.this, WelcomeScreen.class);
+                startActivity(backIntent);
+            }
+        });
 
         findViewById(R.id.take_pic_button).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -144,9 +171,8 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         findViewById(R.id.train_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!trained) {
                     train();
-                }
+
             }
         });
 
@@ -154,9 +180,8 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
             @Override
             public void onClick(View v) {
                 try {
-                    Methods.reset(getBaseContext());
-                    trained = false;
-                    Toast.makeText(TrainActivity.this, "Uspješno poništavanje", Toast.LENGTH_SHORT).show();
+                    Methods.reset();
+                    Toast.makeText(TrainActivity.this, "Poništavanje uspješno", Toast.LENGTH_SHORT).show();
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
                 }
@@ -166,11 +191,11 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         findViewById(R.id.recognize_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Methods.isTrained(getBaseContext())) {
+                if (Methods.isTrained()) {
                     Intent faceRecognizerActivityIntent = new Intent(TrainActivity.this, FaceRecognizerActivity.class);
                     startActivity(faceRecognizerActivityIntent);
                 }else {
-                    Toast.makeText(TrainActivity.this, "Morate prvo istrenirati", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TrainActivity.this, "Morate prvo istrenirati lica", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -194,53 +219,58 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
+        //Izračunavanje absolutne veličine lica
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
+            float mRelativeFaceSize = 0.2f;
             if (Math.round(height * mRelativeFaceSize) > 0) {
                 mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
             }
         }
 
         MatOfRect faces = new MatOfRect();
-        // Use the classifier to detect faces
+
+        //Iskorištavanje klasifikatora za detekciju lica u slici
         if (mFaceDetector != null) {
             mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }else {
             Log.e(TAG, "Detection is not selected!");
         }
 
-        // If there are any faces found, draw a rectangle around it
+        //Crtanje pravokutnika oko svakog detektiranog lica u slici
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
+        //Ako je detektirano jedno lice u slici i pritisnut je gumb Slikaj, pokreće se metoda uzimanja slike i metoda prikaza potrebnog broja slika
         if (facesArray.length == 1) {
             if (takePhoto) {
                 capturePhoto(mRgba);
                 alertRemainingPhotos();
             }
         }
-
         return mRgba;
     }
 
+    //Metoda uzimanja slike
     private void capturePhoto(Mat rgbaMat) {
         try {
-            Methods.takePhoto(getBaseContext(), personName, Methods.qtdPhotos(getBaseContext()) + 1, rgbaMat.clone(), mFaceDetector);
+            Methods.takePhoto(Methods.numPhotos() + 1, rgbaMat.clone(), mFaceDetector);
         }catch (Exception e) {
             e.printStackTrace();
         }
         takePhoto = false;
     }
 
+    //Metoda treniranja koja se pokreće pritiskom na gumb Treniraj
     private void train() {
-        int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.qtdPhotos(getBaseContext());
+        int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.numPhotos();
         if (remainingPhotos > 0) {
-            Toast.makeText(this, "Trebate još " + remainingPhotos + " sliku/a za treniranje", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Trebate još " + remainingPhotos + " slika za treniranje", Toast.LENGTH_SHORT).show();
             return;
-        }else if (Methods.isTrained(getBaseContext())) {
-            Toast.makeText(this, "Istrenirano već", Toast.LENGTH_SHORT).show();
+        }else if (Methods.isTrained()) {
+            Toast.makeText(this, "Treniranje je već obavljeno", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -249,9 +279,8 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
             @Override
             protected Void doInBackground(Void... voids) {
                 try {
-                    if (!Methods.isTrained(getBaseContext())) {
-                        Methods.train(getBaseContext());
-                        trained = true;
+                    if (!Methods.isTrained()) {
+                        Methods.train();
                     }
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
@@ -263,7 +292,11 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
             protected void onPostExecute(Void aVoid) {
                 super.onPostExecute(aVoid);
                 try {
-                    Toast.makeText(TrainActivity.this, "Uspjeh treniranja: " + Methods.isTrained(getBaseContext()), Toast.LENGTH_SHORT).show();
+                    if (Methods.isTrained()) {
+                        Toast.makeText(TrainActivity.this, "Treniranje uspješno", Toast.LENGTH_SHORT).show();
+                    }else {
+                        Toast.makeText(TrainActivity.this, "Treniranje neuspješno", Toast.LENGTH_SHORT).show();
+                    }
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
                 }
@@ -271,13 +304,14 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         }.execute();
     }
 
+    //Metoda prikaza potrebnog broja slika
     private void alertRemainingPhotos() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.qtdPhotos(getBaseContext());
+                int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.numPhotos();
                 if (remainingPhotos > 0) {
-                    Toast.makeText(getBaseContext(), "Još " + remainingPhotos + " slika", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), remainingPhotos + "/" + "5", Toast.LENGTH_SHORT).show();
                 }else {
                     Toast.makeText(TrainActivity.this, "Slikali ste maksimum broj slika", Toast.LENGTH_SHORT).show();
                 }

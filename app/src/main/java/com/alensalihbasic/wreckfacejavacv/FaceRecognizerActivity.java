@@ -1,14 +1,18 @@
 package com.alensalihbasic.wreckfacejavacv;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.nfc.Tag;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
 
 import org.bytedeco.javacpp.DoublePointer;
 import org.bytedeco.javacpp.IntPointer;
@@ -34,14 +38,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static com.alensalihbasic.wreckfacejavacv.Methods.ACCEPT_LEVEL;
-import static org.bytedeco.javacpp.opencv_imgproc.COLOR_BGR2GRAY;
-import static org.bytedeco.javacpp.opencv_imgproc.CV_FONT_HERSHEY_TRIPLEX;
-import static org.bytedeco.javacpp.opencv_imgproc.CV_RGBA2GRAY;
-import static org.bytedeco.javacpp.opencv_imgproc.cvCvtColor;
-import static org.bytedeco.javacpp.opencv_imgproc.cvtColor;
+import static com.alensalihbasic.wreckfacejavacv.Methods.THRESHOLD;
 import static org.bytedeco.javacpp.opencv_imgproc.equalizeHist;
-import static org.bytedeco.javacpp.opencv_imgproc.putText;
 import static org.bytedeco.javacpp.opencv_imgproc.resize;
 
 public class FaceRecognizerActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -52,9 +50,10 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
     private File mCascadeFile;
     private Mat mRgba, mGray;
     private int mAbsoluteFaceSize = 0;
-    private String personName;
-    private opencv_face.FaceRecognizer eigenFaceRecognizer = opencv_face.EigenFaceRecognizer.create();
+    private opencv_face.FaceRecognizer mLBPHFaceRecognizer = opencv_face.LBPHFaceRecognizer.create();
+    private int mCameraId = 1;
 
+    //Veza između aplikacije i OpenCV Manager-a
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -66,10 +65,10 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                // load cascade file from application resources
-                                InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
+                                InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                                mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+                                mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
                                 FileOutputStream os = new FileOutputStream(mCascadeFile);
 
                                 byte[] buffer = new byte[4096];
@@ -142,21 +141,46 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
 
         mOpenCvCameraView = findViewById(R.id.CameraView);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
+        mOpenCvCameraView.setCameraIndex(mCameraId);
         mOpenCvCameraView.setCvCameraViewListener(this);
 
-        SharedPreferences myPrefs = getApplicationContext().getSharedPreferences("myPrefs", MODE_PRIVATE);
-        personName = myPrefs.getString("name", null);
+        ToggleButton mFlipCamera = findViewById(R.id.toggle_camera);
+        mFlipCamera.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    mCameraId = 0;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(mCameraId);
+                    mOpenCvCameraView.enableView();
+                } else {
+                    mCameraId = 1;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(1);
+                    mOpenCvCameraView.enableView();
+                }
+            }
+        });
 
+        Button mBackButton = findViewById(R.id.back_button);
+        mBackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Methods.reset();
+                Intent backIntent = new Intent(FaceRecognizerActivity.this, WelcomeScreen.class);
+                startActivity(backIntent);
+            }
+        });
+
+        //Učitavanje istreniranog klasifikatora iz direktorija SlikeLica u model za prepoznavanje lica
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
                 try {
-                    if (Methods.isTrained(getBaseContext())) {
-                        File folder = new File(getFilesDir(), Methods.TRAIN_FOLDER);
-                        File f = new File(folder, Methods.LBPH_CLASSIFIER);
-                        Log.i(TAG, "Classifier = " + f);
-                        eigenFaceRecognizer.read(f.getAbsolutePath());
-                    }
+                    File folder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), Methods.FACE_PICS);
+                    File f = new File(folder, Methods.LBPH_CLASSIFIER);
+                    Log.i(TAG, "Classifier = " + f);
+                    mLBPHFaceRecognizer.read(f.getAbsolutePath());
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
                 }
@@ -184,6 +208,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
+        //Izračunavanje absolutne veličine lica
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             float mRelativeFaceSize = 0.2f;
@@ -194,7 +219,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
 
         MatOfRect faces = new MatOfRect();
 
-        // Use the classifier to detect faces
+        //Iskorištavanje klasifikatora za detekciju lica u slici
         if (mFaceDetector != null) {
             mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }else {
@@ -202,41 +227,50 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
         }
 
 
-        // If there are any faces found, draw a rectangle around it
+        //Crtanje pravokutnika oko svakog detektiranog lica u slici
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
+        //Ako je detektirano jedno lice u slici, pokreće se metoda prepoznavanja lica
         if (facesArray.length == 1) {
             try {
-                opencv_core.Mat javaCvMat = new opencv_core.Mat((Pointer) null) {{address = mGray.getNativeObjAddr();}}; //Conversion of OpenCV Mat to JavaCV Mat
+                //Konverzija OpenCV Mat-a u JavaCV Mat
+                opencv_core.Mat javaCvMat = new opencv_core.Mat((Pointer) null) {{address = mGray.getNativeObjAddr();}};
+                //Smanjivanje rezolucije na 92x112
                 resize(javaCvMat, javaCvMat, new opencv_core.Size(Methods.IMG_WIDTH, Methods.IMG_HEIGHT));
+                //Ujednačavanje histograma
                 equalizeHist(javaCvMat, javaCvMat);
 
                 IntPointer label = new IntPointer(1);
                 DoublePointer confidence = new DoublePointer(1);
-                eigenFaceRecognizer.predict(javaCvMat, label, confidence);
+                //Metoda prepoznavanja lica
+                mLBPHFaceRecognizer.predict(javaCvMat, label, confidence);
 
+                //Dohvaćanje najbliže slike iz treniranog modela lica
                 int predictedLabel = label.get(0);
+                //Dohvaćanje vjerojatnosti. Manji broj = preciznije.
                 double acceptanceLevel = confidence.get(0);
                 String name;
                 Log.d(TAG, "Prediction completed, predictedLabel: " + predictedLabel + ", acceptanceLevel: " + acceptanceLevel);
-                if (predictedLabel == -1 || acceptanceLevel >= ACCEPT_LEVEL) {
-                    name = getString(R.string.unknown_name);
+                if (predictedLabel == -1 || acceptanceLevel >= THRESHOLD) {
+                    name = "-";
                 } else {
-                    name = personName;
+                    name = Integer.toString(predictedLabel);
                 }
+
+                //Ispis broja najbliže prepoznate slike lica iznad pravokutnika
                 for (Rect face : facesArray) {
                     int posX = (int) Math.max(face.tl().x - 10, 0);
                     int posY = (int) Math.max(face.tl().y - 10, 0);
-                    Imgproc.putText(mRgba, name, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX, 1.5, new Scalar(0, 255, 255));
+                    Imgproc.putText(mRgba, "Najbliza slika: br." + name, new Point(posX, posY),
+                            Core.FONT_HERSHEY_TRIPLEX, 1.5, new Scalar(0, 255, 0, 255));
                 }
             }catch (Exception e) {
                 Log.d(TAG, e.getLocalizedMessage(), e);
             }
         }
-
         return mRgba;
     }
 }

@@ -16,6 +16,16 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom">
 
+        <ToggleButton
+            android:id="@+id/toggle_camera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:height="50dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:textOff="@string/front_camera"
+            android:textOn="@string/back_camera"/>
+
         <Button
             android:id="@+id/take_pic_button"
             android:layout_width="wrap_content"
@@ -47,6 +57,14 @@
             android:layout_above="@+id/take_pic_button"
             android:layout_alignParentRight="true"
             android:text="@string/recognize_button"/>
+
+        <Button
+            android:id="@+id/back_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:text="@string/back_button"/>
     </RelativeLayout>
 
 </FrameLayout>

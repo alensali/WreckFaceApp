@@ -1,13 +1,18 @@
 package com.alensalihbasic.wreckfacejavacv;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.AssetManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -35,13 +40,15 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
 
     private static final String TAG = "AgeRecognizer";
     private CameraBridgeViewBase mOpenCvCameraView;
-    private Net ageNet;
+    private Net mAgeNet;
     private CascadeClassifier mFaceDetector;
     private File mCascadeFile;
     private Mat mRgba, mGray;
     private int mAbsoluteFaceSize = 0;
-    private static final String[] AGES = new String[]{"0-2", "4-6", "8-13", "15-20", "25-32", "38-43", "48-53", "60-"};
+    private static final String[] AGES = new String[]{"0-2", "4-6", "8-13", "15-20", "25-32", "38-43", "48-53", "60+"};
+    private int mCameraId = 1;
 
+    //Veza između aplikacije i OpenCV Manager-a
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -53,7 +60,7 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                // load cascade file from application resources
+                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
                                 InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
                                 mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
@@ -71,12 +78,12 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
                                 if (mFaceDetector.empty()) {
                                     Log.e(TAG, "Failed to load cascade classfier");
                                     mFaceDetector = null;
-                                }else {
+                                } else {
                                     Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
                                 }
                                 cascadeDir.delete();
 
-                            }catch (IOException e) {
+                            } catch (IOException e) {
                                 e.printStackTrace();
                                 Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
                             }
@@ -109,7 +116,7 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
         if (!OpenCVLoader.initDebug()) {
             Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
-        }else {
+        } else {
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
@@ -129,7 +136,36 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
 
         mOpenCvCameraView = findViewById(R.id.CameraView);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
+        mOpenCvCameraView.setCameraIndex(mCameraId);
         mOpenCvCameraView.setCvCameraViewListener(this);
+
+        ToggleButton mFlipCamera = findViewById(R.id.toggle_camera);
+        mFlipCamera.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    mCameraId = 0;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(mCameraId);
+                    mOpenCvCameraView.enableView();
+                } else {
+                    mCameraId = 1;
+                    mOpenCvCameraView.disableView();
+                    mOpenCvCameraView.setCameraIndex(1);
+                    mOpenCvCameraView.enableView();
+                }
+            }
+        });
+
+        Button mBackButton = findViewById(R.id.back_button);
+        mBackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Methods.reset();
+                Intent backIntent = new Intent(AgeRecognizer.this, WelcomeScreen.class);
+                startActivity(backIntent);
+            }
+        });
     }
 
     @Override
@@ -137,13 +173,14 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
         mGray = new Mat();
         mRgba = new Mat();
 
+        //Učitavanje Caffe modela u duboku neuronsku mrežu
         String proto = getPath("deploy_age.prototxt", this);
         String weights = getPath("age_net.caffemodel", this);
-        ageNet = Dnn.readNetFromCaffe(proto, weights);
+        mAgeNet = Dnn.readNetFromCaffe(proto, weights);
 
-        if (ageNet.empty()) {
+        if (mAgeNet.empty()) {
             Log.i(TAG, "Network loading failed");
-        }else {
+        } else {
             Log.i(TAG, "Network loading success");
         }
     }
@@ -160,6 +197,7 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
+        //Izračunavanje absolutne veličine lica
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             float mRelativeFaceSize = 0.2f;
@@ -170,49 +208,55 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
 
         MatOfRect faces = new MatOfRect();
 
-        // Use the classifier to detect faces
+        //Iskorištavanje klasifikatora za detekciju lica u slici
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
-        }else {
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2,
+                    new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+        } else {
             Log.e(TAG, "Detection is not selected!");
         }
 
-        // If there are any faces found, draw a rectangle around it
+        //Crtanje pravokutnika oko svakog detektiranog lica u slici
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
+        //Ako je detektirano jedno lice u slici, pokreće se metoda prepoznavanja dobne skupine
         if (facesArray.length == 1) {
             String age = predictAge(mRgba, facesArray);
             Log.i(TAG, "Age is: " + age);
 
+            //Ispis prepoznate dobne skupine iznad pravokutnika
             for (Rect face : facesArray) {
                 int posX = (int) Math.max(face.tl().x - 10, 0);
                 int posY = (int) Math.max(face.tl().y - 10, 0);
 
-                Imgproc.putText(mRgba, "Godine: " + age, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX, 1.5, new Scalar(0, 255, 255));
+                Imgproc.putText(mRgba, "Godine: " + age, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX,
+                        1.5, new Scalar(0, 255, 0, 255));
             }
         }
-
-
-
         return mRgba;
     }
 
+    //Metoda prepoznavanja dobne skupine
     private String predictAge(Mat mRgba, Rect[] facesArray) {
         try {
             for (Rect face : facesArray) {
                 Mat capturedFace = new Mat(mRgba, face);
+                //Smanjivanje rezolucije slike na potrebnu rezoluciju koju istrenirani Caffe model očekuje
                 Imgproc.resize(capturedFace, capturedFace, new Size(227, 227));
+                //Promjena četverokanalne(RGBA) slike u trokanalnu(BGR)
                 Imgproc.cvtColor(capturedFace, capturedFace, Imgproc.COLOR_RGBA2BGR);
 
-                Mat inputBlob = Dnn.blobFromImage(capturedFace, 1.0f, new Size(227, 227), new Scalar(78.4263377603, 87.7689143744, 114.895847746), false, false);
-                ageNet.setInput(inputBlob, "data");
-                Mat probs = ageNet.forward("prob").reshape(1, 1); // flatten to a single row
-                Core.MinMaxLocResult mm = Core.minMaxLoc(probs); // get largest softmax output
+                //Slanje slike lica kroz duboku neuronsku mrežu (Dnn)
+                Mat inputBlob = Dnn.blobFromImage(capturedFace, 1.0f, new Size(227, 227),
+                        new Scalar(78.4263377603, 87.7689143744, 114.895847746), false, false);
+                mAgeNet.setInput(inputBlob, "data");
+                Mat probs = mAgeNet.forward("prob").reshape(1, 1);
+                Core.MinMaxLocResult mm = Core.minMaxLoc(probs); //Uzimanje najveće vjerojatnosti
 
-                double result = mm.maxLoc.x; //age group
+                double result = mm.maxLoc.x; //Dobivena dobna skupina
                 Log.i(TAG, "Result is: " + result);
                 return AGES[(int) result];
             }
@@ -222,26 +266,25 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
         return null;
     }
 
-    // Upload file to storage and return a path.
+    //Učitavanje datoteke u skladište i dohvaćanje njezinog puta
     private static String getPath(String file, Context context) {
-
         AssetManager assetManager = context.getAssets();
-        BufferedInputStream inputStream = null;
+        BufferedInputStream inputStream;
 
         try {
-            // Read data from assets.
+            //Čitanje datoteka iz app/build/intermediates/assets/debug
             inputStream = new BufferedInputStream(assetManager.open(file));
             byte[] data = new byte[inputStream.available()];
             inputStream.read(data);
             inputStream.close();
 
-            // Create copy file in storage.
+            //Kreiranje kopirane datoteke u skladište
             File outputFile = new File(context.getFilesDir(), file);
             FileOutputStream fileOutputStream = new FileOutputStream(outputFile);
             fileOutputStream.write(data);
             fileOutputStream.close();
             return outputFile.getAbsolutePath();
-        }catch (IOException ex) {
+        } catch (IOException ex) {
             Log.i(TAG, "Failed to upload a file");
         }
         return "";
