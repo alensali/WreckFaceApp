@@ -20,7 +20,7 @@
             android:id="@+id/toggle_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:height="50dp"
+            android:padding="17dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true"
             android:textOff="@string/front_camera"
@@ -32,6 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
+            android:padding="17dp"
             android:text="@string/take_pic_button" />
 
         <Button
@@ -40,6 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_above="@id/reset_button"
+            android:padding="17dp"
             android:text="@string/train_button"/>
 
         <Button
@@ -48,6 +50,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
+            android:padding="17dp"
             android:text="@string/reset_button" />
 
         <Button
@@ -56,6 +59,7 @@
             android:layout_height="wrap_content"
             android:layout_above="@+id/take_pic_button"
             android:layout_alignParentRight="true"
+            android:padding="17dp"
             android:text="@string/recognize_button"/>
 
         <Button
@@ -64,6 +68,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
             android:layout_alignParentLeft="true"
+            android:padding="17dp"
             android:text="@string/back_button"/>
     </RelativeLayout>
 

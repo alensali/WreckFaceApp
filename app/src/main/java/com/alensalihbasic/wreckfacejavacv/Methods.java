@@ -24,16 +24,17 @@ import static org.bytedeco.javacpp.opencv_imgproc.resize;
 import static org.opencv.core.CvType.CV_32SC1;
 
 public class Methods {
+
     public static final String TAG = "Methods";
-    public static final String FACE_PICS = "SlikeLica";
+    public static final String FACE_PICS = "FacePics";
     public static final int IMG_WIDTH = 92;
     public static final int IMG_HEIGHT = 112;
-    public static final int PHOTOS_TRAIN_QTY = 5;
-    public static final double THRESHOLD = 125.0D;
-    public static final String LBPH_CLASSIFIER = "lbphKlasifikator.xml";
+    public static final int PHOTOS_TRAIN_QTY = 25;
+    public static final double THRESHOLD = 130.0D;
+    public static final String LBPH_CLASSIFIER = "lbphClassifier.xml";
     public static final File ROOT = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), FACE_PICS);
 
-    //Metoda brisanja svih datoteka iz direktorija SlikeLica
+    //Method for deleting all data from FacePics
     public static void reset() {
         File facePicsPath = new File(String.valueOf(ROOT));
 
@@ -45,7 +46,7 @@ public class Methods {
         }
     }
 
-    //Metoda koja provjerava da li su ispunjeni uvjeti: broj slika i istrenirani model
+    //Method for checking if conditions (number of pictures and classifier) are met
     public static boolean isTrained() {
         try {
             File facePicsPath = new File(String.valueOf(ROOT));
@@ -75,7 +76,7 @@ public class Methods {
         return false;
     }
 
-    //Metoda provjere broja slika lica
+    //Method for checking the number of face pictures
     public static int numPhotos() {
         File facePicsPath = new File(String.valueOf(ROOT));
 
@@ -92,7 +93,7 @@ public class Methods {
         return 0;
     }
 
-    //Metoda treniranja modela prepoznavanja lica
+    //Method for face recognition model training
     public static boolean train() throws Exception {
         File facePicsPath = new File(String.valueOf(ROOT));
 
@@ -112,21 +113,20 @@ public class Methods {
         int counter = 0;
 
         for (File image : photosArray) {
-            //Učitavanje slike u jednokanalnom formatu slike (GRAY)
+            //Reading the image in grayscale
             opencv_core.Mat photo = imread(image.getAbsolutePath(), opencv_imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
-            Log.d(TAG, "Image: " + image.getName());
-            //Odvajanje broja slike
+            //Photo number separation
             int intLabel = Integer.parseInt(image.getName().split("\\.")[0]);
-            //Smanjivanje rezolucije na 92x112
+            //Resizing to 92x112
             resize(photo, photo, new opencv_core.Size(IMG_WIDTH, IMG_HEIGHT));
-            //Ujednačavanje histograma slike
+            //Histogram equalizing
             equalizeHist(photo, photo);
             photosMatVector.put(counter, photo);
             intBuffer.put(counter, intLabel);
             counter++;
         }
 
-        //Kreiranje, treniranje i zapisivanje LBPH modela prepoznavanja lica
+        //Creating, training and saving LBPH face recognizer
         opencv_face.FaceRecognizer mLBPHFaceRecognizer = opencv_face.LBPHFaceRecognizer.create();
         mLBPHFaceRecognizer.train(photosMatVector, labels);
         File trainedFaceRecognizerModel = new File(facePicsPath, LBPH_CLASSIFIER);
@@ -135,7 +135,7 @@ public class Methods {
         return true;
     }
 
-    //Metoda uzimanja i spremanja slika
+    //Method for capturing photos
     public static void takePhoto(int photoNumber, Mat rgbaMat, CascadeClassifier faceDetector) throws Exception {
         File facePicsPath = new File(String.valueOf(ROOT));
 
@@ -145,7 +145,7 @@ public class Methods {
             facePicsPath.mkdirs();
 
         Mat grayMat = new Mat();
-        //Pretvaranje četverokanalne slike (RGBA) u jednokanalnu sliku (GRAY)
+        //Converting RGBA to GRAY
         Imgproc.cvtColor(rgbaMat, grayMat, Imgproc.COLOR_RGBA2GRAY);
 
         MatOfRect detectedFaces = new MatOfRect();
@@ -154,16 +154,15 @@ public class Methods {
 
         for (Rect face : detectedFacesArray) {
             Mat capturedFace = new Mat(grayMat, face);
-            //Smanjivanje rezolucije na 92x112
+            //Resizing to 92x112
             Imgproc.resize(capturedFace, capturedFace, new Size(IMG_WIDTH, IMG_HEIGHT));
-            //Ujednačavanje histograma slike
+            //Histogram equalizing
             Imgproc.equalizeHist(capturedFace, capturedFace);
 
             if (photoNumber <= PHOTOS_TRAIN_QTY) {
-                //Format slike u obliku brojSlike.formatSlike (pr. 1.png)
                 File savePhoto = new File(facePicsPath, String.format("%d.png", photoNumber));
                 savePhoto.createNewFile();
-                //Zapisivanje slike lica u direktorij SlikeLica
+                //Saving photos to directory FacePics
                 Imgcodecs.imwrite(savePhoto.getAbsolutePath(), capturedFace);
                 Log.i(TAG, "PIC PATH: " + savePhoto.getAbsolutePath());
             }

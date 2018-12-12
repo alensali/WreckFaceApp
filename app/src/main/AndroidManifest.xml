@@ -37,9 +37,6 @@
         <activity android:name=".FaceRecognizerActivity"
             android:screenOrientation="landscape">
         </activity>
-        <!--<activity android:name=".TrainingInfo"
-            android:screenOrientation="portrait">
-        </activity>-->
         <activity android:name=".TrainActivity"
             android:screenOrientation="landscape">
         </activity>

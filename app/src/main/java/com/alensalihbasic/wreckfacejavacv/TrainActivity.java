@@ -2,9 +2,12 @@ package com.alensalihbasic.wreckfacejavacv;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -42,7 +45,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
     private boolean takePhoto;
     private int mCameraId = 1;
 
-    //Veza između aplikacije i OpenCV Manager-a
+    //Connection between app and OpenCV Manager
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -54,7 +57,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
+                                //Loading detection classifier from resources
                                 InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
                                 mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
@@ -181,7 +184,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
             public void onClick(View v) {
                 try {
                     Methods.reset();
-                    Toast.makeText(TrainActivity.this, "Poništavanje uspješno", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TrainActivity.this, "Reset successful", Toast.LENGTH_SHORT).show();
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
                 }
@@ -195,7 +198,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
                     Intent faceRecognizerActivityIntent = new Intent(TrainActivity.this, FaceRecognizerActivity.class);
                     startActivity(faceRecognizerActivityIntent);
                 }else {
-                    Toast.makeText(TrainActivity.this, "Morate prvo istrenirati lica", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TrainActivity.this, "You need to train first", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -219,7 +222,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-        //Izračunavanje absolutne veličine lica
+        //Computing absolute face size
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             float mRelativeFaceSize = 0.2f;
@@ -230,20 +233,21 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
 
         MatOfRect faces = new MatOfRect();
 
-        //Iskorištavanje klasifikatora za detekciju lica u slici
+        //Using detection classifier
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2,
+                    new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }else {
             Log.e(TAG, "Detection is not selected!");
         }
 
-        //Crtanje pravokutnika oko svakog detektiranog lica u slici
+        //Drawing rectangle around detected face
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
-        //Ako je detektirano jedno lice u slici i pritisnut je gumb Slikaj, pokreće se metoda uzimanja slike i metoda prikaza potrebnog broja slika
+        //If one face is detected and Capture is pressed, method capturePhoto and alertRemainingPhotos are executed
         if (facesArray.length == 1) {
             if (takePhoto) {
                 capturePhoto(mRgba);
@@ -253,7 +257,7 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         return mRgba;
     }
 
-    //Metoda uzimanja slike
+    //Method for capturing photos
     private void capturePhoto(Mat rgbaMat) {
         try {
             Methods.takePhoto(Methods.numPhotos() + 1, rgbaMat.clone(), mFaceDetector);
@@ -263,18 +267,18 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         takePhoto = false;
     }
 
-    //Metoda treniranja koja se pokreće pritiskom na gumb Treniraj
+    //Method for training which is executed by pressing Train
     private void train() {
         int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.numPhotos();
         if (remainingPhotos > 0) {
-            Toast.makeText(this, "Trebate još " + remainingPhotos + " slika za treniranje", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "You need " + remainingPhotos + " more photo(s)", Toast.LENGTH_SHORT).show();
             return;
         }else if (Methods.isTrained()) {
-            Toast.makeText(this, "Treniranje je već obavljeno", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Already trained", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Toast.makeText(this, "Treniranje započeto", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Training started", Toast.LENGTH_SHORT).show();
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
@@ -293,9 +297,9 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
                 super.onPostExecute(aVoid);
                 try {
                     if (Methods.isTrained()) {
-                        Toast.makeText(TrainActivity.this, "Treniranje uspješno", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TrainActivity.this, "Training successful", Toast.LENGTH_SHORT).show();
                     }else {
-                        Toast.makeText(TrainActivity.this, "Treniranje neuspješno", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(TrainActivity.this, "Training unsuccessful", Toast.LENGTH_SHORT).show();
                     }
                 }catch (Exception e) {
                     Log.d(TAG, e.getLocalizedMessage(), e);
@@ -304,16 +308,16 @@ public class TrainActivity extends AppCompatActivity implements CameraBridgeView
         }.execute();
     }
 
-    //Metoda prikaza potrebnog broja slika
+    //Method for displaying remaining number of photos
     private void alertRemainingPhotos() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 int remainingPhotos = Methods.PHOTOS_TRAIN_QTY - Methods.numPhotos();
                 if (remainingPhotos > 0) {
-                    Toast.makeText(getBaseContext(), remainingPhotos + "/" + "5", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getBaseContext(), "You need " + remainingPhotos + " more photo(s)", Toast.LENGTH_SHORT).show();
                 }else {
-                    Toast.makeText(TrainActivity.this, "Slikali ste maksimum broj slika", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(TrainActivity.this, "You took max number of photos", Toast.LENGTH_SHORT).show();
                 }
             }
         });

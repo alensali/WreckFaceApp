@@ -2,7 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="#eeeeee">
 
     <TextView
         android:id="@+id/welcome_text_view"
@@ -34,10 +35,10 @@
         android:layout_below="@+id/signature_text_view"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="50dp"
-        android:padding="15dp"
+        android:padding="17dp"
         android:text="@string/gender_button"
         android:textAllCaps="true"
-        android:textColor="@color/colorAccent"
+        android:textColor="#212121"
         android:textSize="14sp"/>
 
     <Button
@@ -49,10 +50,10 @@
         android:layout_below="@+id/gender_button"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:padding="15dp"
+        android:padding="17dp"
         android:text="@string/age_button"
         android:textAllCaps="true"
-        android:textColor="@color/colorAccent"
+        android:textColor="#212121"
         android:textSize="14sp"/>
 
     <Button
@@ -64,10 +65,10 @@
         android:layout_below="@+id/age_button"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:padding="15dp"
+        android:padding="17dp"
         android:text="@string/face_button"
         android:textAllCaps="true"
-        android:textColor="@color/colorAccent"
+        android:textColor="#212121"
         android:textSize="14sp"/>
 
 </RelativeLayout>

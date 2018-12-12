@@ -1,19 +1,18 @@
 <resources>
     <string name="app_name">WreckFace</string>
-    <string name="welcome">Dobrodošli u WreckFace</string>
+    <string name="welcome">Welcome to WreckFace</string>
     <string name="signature">Alen Salihbašić</string>
-    <string name="edit_text_hint">Upišite ime osobe za treniranje</string>
-    <string name="gender_button">Prepoznavanje spola</string>
-    <string name="age_button">Prepoznavanje dobne skupine</string>
-    <string name="face_button">Prepoznavanje lica</string>
-    <string name="take_pic_button">Slikaj</string>
-    <string name="train_button">Treniraj</string>
-    <string name="reset_button">Poništi</string>
-    <string name="recognize_button">Prepoznaj</string>
-    <string name="train_question_tv">Koga želite trenirati?</string>
-    <string name="train_next_button">Dalje</string>
-    <string name="flip_camera">OKRENI</string>
-    <string name="back_button">Natrag</string>
-    <string name="front_camera">Prednja</string>
-    <string name="back_camera">Zadnja</string>
+    <string name="gender_button">Gender recognition</string>
+    <string name="age_button">Age recognition</string>
+    <string name="face_button">Face recognition</string>
+    <string name="take_pic_button">Capture</string>
+    <string name="train_button">Train</string>
+    <string name="reset_button">Reset</string>
+    <string name="recognize_button">Recognize</string>
+    <string name="flip_camera">Flip</string>
+    <string name="back_button">Back</string>
+    <string name="front_camera">Front</string>
+    <string name="back_camera">Back</string>
+    <string name="permission_warning">To continue, please enable Camera and Storage permission for this application.</string>
+    <string name="dismiss">Dismiss</string>
 </resources>

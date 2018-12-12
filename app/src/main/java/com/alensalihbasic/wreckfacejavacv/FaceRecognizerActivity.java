@@ -53,7 +53,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
     private opencv_face.FaceRecognizer mLBPHFaceRecognizer = opencv_face.LBPHFaceRecognizer.create();
     private int mCameraId = 1;
 
-    //Veza između aplikacije i OpenCV Manager-a
+    //Connection between app and OpenCV Manager
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -65,7 +65,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
+                                //Loading detection classifier from resources
                                 InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface_improved);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
                                 mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface_improved.xml");
@@ -172,7 +172,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
             }
         });
 
-        //Učitavanje istreniranog klasifikatora iz direktorija SlikeLica u model za prepoznavanje lica
+        //Loading trained classifier for face recognition from directory FacePics
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... voids) {
@@ -208,7 +208,7 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-        //Izračunavanje absolutne veličine lica
+        //Computing absolute face size
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             float mRelativeFaceSize = 0.2f;
@@ -219,38 +219,36 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
 
         MatOfRect faces = new MatOfRect();
 
-        //Iskorištavanje klasifikatora za detekciju lica u slici
+        //Using detection classifier
         if (mFaceDetector != null) {
-            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+            mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2,
+                    new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
         }else {
             Log.e(TAG, "Detection is not selected!");
         }
 
 
-        //Crtanje pravokutnika oko svakog detektiranog lica u slici
+        //Drawing rectangle around detected face
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
-        //Ako je detektirano jedno lice u slici, pokreće se metoda prepoznavanja lica
+        //If one face is detected, face prediction is executed
         if (facesArray.length == 1) {
             try {
-                //Konverzija OpenCV Mat-a u JavaCV Mat
+                //Conversion from OpenCV Mat to JavaCV Mat
                 opencv_core.Mat javaCvMat = new opencv_core.Mat((Pointer) null) {{address = mGray.getNativeObjAddr();}};
-                //Smanjivanje rezolucije na 92x112
+                //Picture resizing
                 resize(javaCvMat, javaCvMat, new opencv_core.Size(Methods.IMG_WIDTH, Methods.IMG_HEIGHT));
-                //Ujednačavanje histograma
+                //Histogram equalizing
                 equalizeHist(javaCvMat, javaCvMat);
 
                 IntPointer label = new IntPointer(1);
                 DoublePointer confidence = new DoublePointer(1);
-                //Metoda prepoznavanja lica
                 mLBPHFaceRecognizer.predict(javaCvMat, label, confidence);
 
-                //Dohvaćanje najbliže slike iz treniranog modela lica
                 int predictedLabel = label.get(0);
-                //Dohvaćanje vjerojatnosti. Manji broj = preciznije.
                 double acceptanceLevel = confidence.get(0);
                 String name;
                 Log.d(TAG, "Prediction completed, predictedLabel: " + predictedLabel + ", acceptanceLevel: " + acceptanceLevel);
@@ -260,11 +258,11 @@ public class FaceRecognizerActivity extends AppCompatActivity implements CameraB
                     name = Integer.toString(predictedLabel);
                 }
 
-                //Ispis broja najbliže prepoznate slike lica iznad pravokutnika
+                //The result of face recognition
                 for (Rect face : facesArray) {
                     int posX = (int) Math.max(face.tl().x - 10, 0);
                     int posY = (int) Math.max(face.tl().y - 10, 0);
-                    Imgproc.putText(mRgba, "Najbliza slika: br." + name, new Point(posX, posY),
+                    Imgproc.putText(mRgba, "Closest picture: num." + name, new Point(posX, posY),
                             Core.FONT_HERSHEY_TRIPLEX, 1.5, new Scalar(0, 255, 0, 255));
                 }
             }catch (Exception e) {

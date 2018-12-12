@@ -2,9 +2,12 @@ package com.alensalihbasic.wreckfacejavacv;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -47,7 +50,8 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
     private static final String[] GENDERS = new String[]{"MUSKO", "ZENSKO"};
     private int mCameraId = 1;
 
-    //Veza između aplikacije i OpenCV Manager-a
+
+    //Connection between app and OpenCV Manager
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -59,7 +63,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
                         @Override
                         protected Void doInBackground(Void... voids) {
                             try {
-                                //Učitavanje datoteke klasifikatora iz resursa aplikacije
+                                //Loading detection classifier from resources
                                 InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
                                 File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
                                 mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
@@ -172,7 +176,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
         mGray = new Mat();
         mRgba = new Mat();
 
-        //Učitavanje Caffe modela u duboku neuronsku mrežu
+        //Loading Caffe model to Dnn
         String proto = getPath("deploy_gender.prototxt", this);
         String weights = getPath("gender_net.caffemodel", this);
         mGenderNet = Dnn.readNetFromCaffe(proto, weights);
@@ -196,7 +200,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-        //Izračunavanje absolutne veličine lica
+        //Computing absolute face size
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             float mRelativeFaceSize = 0.2f;
@@ -207,7 +211,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
 
         MatOfRect faces = new MatOfRect();
 
-        //Iskorištavanje klasifikatora za detekciju lica u slici
+        //Using detection classifier
         if (mFaceDetector != null) {
             mFaceDetector.detectMultiScale(mGray, faces, 1.1, 5, 2,
                     new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
@@ -215,17 +219,17 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
             Log.e(TAG, "Detection is not selected!");
         }
 
-        //Crtanje pravokutnika oko svakog detektiranog lica u slici
+        //Drawing rectangle around detected face
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++) {
             Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
         }
 
-        //Ako je detektirano jedno lice u slici, pokreće se metoda prepoznavanja spola
+        //If one face is detected, method predictGender is executed
         if (facesArray.length == 1) {
             String gender = predictGender(mRgba, facesArray);
 
-            //Ispis prepoznate skupine godina iznad pravokutnika
+            //The result of gender recognition
             for (Rect face : facesArray) {
                 int posX = (int) Math.max(face.tl().x - 10, 0);
                 int posY = (int) Math.max(face.tl().y - 10, 0);
@@ -237,26 +241,26 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
         return mRgba;
     }
 
-    //Metoda prepoznavanja spola
+    //Method for gender recognition
     private String predictGender (Mat mRgba, Rect[] facesArray) {
         try {
             for (Rect face : facesArray) {
                 Mat capturedFace = new Mat(mRgba, face);
-                //Smanjivanje rezolucije slike na potrebnu rezoluciju koju istrenirani Caffe model očekuje
+                //Resizing pictures to resolution of Caffe model
                 Imgproc.resize(capturedFace, capturedFace, new Size(227, 227));
-                //Promjena četverokanalne(RGBA) slike u trokanalnu(BGR)
+                //Converting RGBA to BGR
                 Imgproc.cvtColor(capturedFace, capturedFace, Imgproc.COLOR_RGBA2BGR);
 
-                //Slanje slike lica kroz duboku neuronsku mrežu (Dnn)
+                //Forwarding picture through Dnn
                 Mat inputBlob = Dnn.blobFromImage(capturedFace, 1.0f, new Size(227, 227),
                         new Scalar(78.4263377603, 87.7689143744, 114.895847746), false, false);
                 mGenderNet.setInput(inputBlob, "data");
                 Mat probs = mGenderNet.forward("prob").reshape(1, 1);
-                Core.MinMaxLocResult mm = Core.minMaxLoc(probs); //Uzimanje najveće vjerojatnosti
+                Core.MinMaxLocResult mm = Core.minMaxLoc(probs); //Getting largest softmax output
 
-                double result = mm.maxLoc.x; //Dobivena skupina spola
+                double result = mm.maxLoc.x; //Result of gender recognition prediction. 1 = FEMALE, 0 = MALE
                 Log.i(TAG, "Result is: " + result);
-                return GENDERS[(int) result]; //Ako je rezultat 1, lice je ZENSKO. Ako je rezultat 0, lice je MUSKO
+                return GENDERS[(int) result];
             }
         } catch (Exception e) {
             Log.e(TAG, "Error processing gender", e);
@@ -264,19 +268,18 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
         return null;
     }
 
-    //Učitavanje datoteke u skladište i dohvaćanje njezinog puta
+    //Loading data from assets
     private static String getPath(String file, Context context) {
         AssetManager assetManager = context.getAssets();
         BufferedInputStream inputStream;
 
         try {
-            //Čitanje datoteka iz app/build/intermediates/assets/debug
+            //Reading data from app/build/intermediates/assets/debug
             inputStream = new BufferedInputStream(assetManager.open(file));
             byte[] data = new byte[inputStream.available()];
             inputStream.read(data);
             inputStream.close();
 
-            //Kreiranje kopirane datoteke u skladište
             File outputFile = new File(context.getFilesDir(), file);
             FileOutputStream fileOutputStream = new FileOutputStream(outputFile);
             fileOutputStream.write(data);
