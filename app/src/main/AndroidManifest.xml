@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.alensalihbasic.wreckfacejavacv">
+    package="com.alensalihbasic.wreckface">
 
     <!--Allow to use a camera-->
     <uses-permission android:name="android.permission.CAMERA"/>
@@ -20,7 +20,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppFullScreenTheme"
         android:largeHeap="true">
-        <activity android:name=".WelcomeScreen"
+        <activity android:name="com.alensalihbasic.wreckface.WelcomeScreen"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,16 +28,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GenderRecognizer"
+        <activity android:name="com.alensalihbasic.wreckface.GenderRecognizer"
             android:screenOrientation="landscape">
         </activity>
-        <activity android:name=".AgeRecognizer"
+        <activity android:name="com.alensalihbasic.wreckface.AgeRecognizer"
             android:screenOrientation="landscape">
         </activity>
-        <activity android:name=".FaceRecognizerActivity"
+        <activity android:name="com.alensalihbasic.wreckface.FaceRecognizerActivity"
             android:screenOrientation="landscape">
         </activity>
-        <activity android:name=".TrainActivity"
+        <activity android:name="com.alensalihbasic.wreckface.TrainActivity"
             android:screenOrientation="landscape">
         </activity>
     </application>
