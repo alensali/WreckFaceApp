@@ -232,7 +232,7 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
                 int posX = (int) Math.max(face.tl().x - 10, 0);
                 int posY = (int) Math.max(face.tl().y - 10, 0);
 
-                Imgproc.putText(mRgba, "Godine: " + age, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX,
+                Imgproc.putText(mRgba, "Age: " + age, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX,
                         1.5, new Scalar(0, 255, 0, 255));
             }
         }

@@ -44,7 +44,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
     private File mCascadeFile;
     private Mat mRgba, mGray;
     private int mAbsoluteFaceSize = 0;
-    private static final String[] GENDERS = new String[]{"MUSKO", "ZENSKO"};
+    private static final String[] GENDERS = new String[]{"MALE", "FEMALE"};
     private int mCameraId = 1;
 
 
@@ -231,7 +231,7 @@ public class GenderRecognizer extends AppCompatActivity implements CameraBridgeV
                 int posX = (int) Math.max(face.tl().x - 10, 0);
                 int posY = (int) Math.max(face.tl().y - 10, 0);
 
-                Imgproc.putText(mRgba, "Spol: " + gender, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX,
+                Imgproc.putText(mRgba, "Gender: " + gender, new Point(posX, posY), Core.FONT_HERSHEY_TRIPLEX,
                         1.5, new Scalar(0, 255, 0, 255));
             }
         }
