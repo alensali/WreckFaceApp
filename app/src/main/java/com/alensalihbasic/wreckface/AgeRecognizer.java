@@ -272,7 +272,7 @@ public class AgeRecognizer extends AppCompatActivity implements CameraBridgeView
         BufferedInputStream inputStream;
 
         try {
-            //Reading data from app/build/intermediates/assets/debug
+            //Reading data from app/src/main/assets
             inputStream = new BufferedInputStream(assetManager.open(file));
             byte[] data = new byte[inputStream.available()];
             inputStream.read(data);
